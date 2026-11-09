@@ -44,7 +44,7 @@ export async function POST(request) {
     const { actionId, option } = await request.json();
     const def = getActionDefinition(session.current_scene, actionId);
     if (!def || !(def.roles || ["CHIARA","LUCIO"]).includes(session.role)) {
-      return Response.json({ error: "Azione non disponibile per questo libro" }, { status: 403 });
+      return Response.json({ error: "Azione non disponibile per questo concorrente" }, { status: 403 });
     }
     const outcome = def.options?.find((o) => o.value === option);
     if (!outcome) return Response.json({ error: "Opzione non valida" }, { status: 400 });

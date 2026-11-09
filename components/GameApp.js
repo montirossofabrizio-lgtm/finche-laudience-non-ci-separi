@@ -48,6 +48,7 @@ export default function GameApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  const [syncStale, setSyncStale] = useState(false);
 
   useEffect(() => {
     const saved = loadSession();
@@ -77,8 +78,11 @@ export default function GameApp() {
       const res = await fetch("/api/state", { headers: authHeaders, cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Errore di sincronizzazione");
-      setState(json); setError("");
-    } catch (e) { setError(e.message); }
+      setState(json); setSyncStale(false); setError("");
+    } catch (e) {
+      setSyncStale(true);
+      setError("Connessione momentaneamente persa. Lo stato potrebbe non essere aggiornato; le scelte restano bloccate finché la sincronizzazione non torna.");
+    }
   }
 
   function hydrateLocal(localRole) {
@@ -139,6 +143,7 @@ export default function GameApp() {
   }
 
   async function choose(actionId, option) {
+    if (syncStale && !session?.local) return;
     setBusy(true); setError("");
     try {
       if (session.local) {
@@ -160,7 +165,7 @@ export default function GameApp() {
   }
 
   async function advance() {
-    if (session.local || !state?.route?.canAdvance) return;
+    if (session.local || syncStale || !state?.route?.canAdvance) return;
     setBusy(true); setError("");
     try {
       const res = await fetch("/api/advance", { method: "POST", headers: { ...authHeaders } });
@@ -210,7 +215,7 @@ export default function GameApp() {
       <div className="autosave"><span>✓</span> SALVATAGGIO AUTOMATICO</div>
       <div className="role-pill">{displayRole(state.player.role)}</div>
     </header>
-    {tab === "scene" && <SceneView state={state} choose={choose} advance={advance} busy={busy} local={session.local} />}
+    {tab === "scene" && <SceneView state={state} choose={choose} advance={advance} busy={busy || syncStale} local={session.local} />}
     {tab === "journal" && <Journal entries={state.journal} />}
     {tab === "couple" && <Couple state={state} session={session} goHome={goHome} />}
     {error && <div className="error-toast">{error}</div>}{toast && <div className="success-toast">{toast}</div>}
@@ -351,22 +356,50 @@ function normalizeStoryText(text) {
 }
 
 
-function isSpeakerLabel(text) {
+function speakerFromCue(text) {
   const t = normalizeStoryText(text).replace(/\*\*/g, "");
-  return /^(?:Niccolò|Vera|Marta|Mia|Edo|Giada|Mauro|La Produzione|Produzione|Maxischermo|L’altra persona|Tu):$/i.test(t);
+  const rules = [
+    [/^Niccolò\b.*:$/i, "NICCOLÒ"],
+    [/^Vera(?: Monti)?\b.*:$/i, "VERA"],
+    [/^Marta\b.*:$/i, "MARTA"],
+    [/^Mia\b.*:$/i, "MIA"],
+    [/^Edo\b.*:$/i, "EDO"],
+    [/^Giada\b.*:$/i, "GIADA"],
+    [/^Mauro\b.*:$/i, "MAURO"],
+    [/^(?:La )?Produzione\b.*:$/i, "PRODUZIONE"],
+    [/^Tu\b.*:$/i, "TU"],
+    [/^L[’']altra persona\b.*:$/i, "L’ALTRA PERSONA"],
+    [/^Una voce fuori campo\b.*:$/i, "VOCE FUORI CAMPO"]
+  ];
+  return rules.find(([pattern]) => pattern.test(t))?.[1] || null;
+}
+
+function isSpeakerLabel(text) {
+  return Boolean(speakerFromCue(text));
+}
+
+function isScreenCue(text) {
+  const t = normalizeStoryText(text).replace(/\*\*/g, "");
+  return /^(?:Sul (?:tuo |vostro )?telefono(?: comparve| apparve)?|Il telefono(?: mostrò| confermò)?|Sul maxischermo(?: apparve)?|Sotto(?:, [^:]+)?|Seconda riga|Comparve|In fondo(?: c[’']era soltanto)?|Subito sotto):$/i.test(t);
+}
+
+function isMarkdownHeading(text) {
+  return /^#{1,6}\s+/.test(normalizeStoryText(text));
 }
 
 function normalStoryParagraphClass(text) {
   const t = normalizeStoryText(text);
+  if (isMarkdownHeading(t)) return "final-heading";
   if (isSpeakerLabel(t)) return "speaker-label";
+  if (isScreenCue(t)) return "screen-label";
   if (/^[«“"]/.test(t)) return "dialogue";
   return "";
 }
 
 function renderedStoryParagraph(text, className) {
-  if (className === "speaker-label") {
-    return normalizeStoryText(text).replace(/:$/, "");
-  }
+  if (className === "speaker-label") return speakerFromCue(text) || normalizeStoryText(text).replace(/:$/, "");
+  if (className === "screen-label") return normalizeStoryText(text).replace(/:$/, "");
+  if (className === "final-heading") return normalizeStoryText(text).replace(/^#{1,6}\s+/, "");
   return text;
 }
 
@@ -401,7 +434,7 @@ function isCoupleMomentBoundary(text) {
   const t = normalizeStoryText(text);
   return /^(?:[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+\s*·\s*)?\d{1,2}:\d{2}(?::\d{2})?\b/.test(t)
     || /^[«“"]/.test(t)
-    || /^(?:Sara|Luca|Chiara|Lucio|Armas|Suárez|Mirella|Giorgio|Dorothy|Mattia|Chiaretta|Michele|Enrico|Nicolás|Tomás|Stefano):$/i.test(t);
+    || /^(?:Niccolò|Vera|Marta|Mia|Edo|Giada|Mauro|Produzione|La Produzione|Tu|L[’\']altra persona):$/i.test(t);
 }
 
 function storyParagraphClasses(paragraphs) {
@@ -461,7 +494,7 @@ function SceneView({ state, choose, advance, busy, local }) {
     {!local && <section className="continue-card">
       {state.route?.waitingForPartner && <p>Aspetta che anche l’altra persona completi la scelta necessaria.</p>}
       {state.route?.blocked && <p>{state.route.message || "Prima completa la scelta della scena."}</p>}
-      {state.route?.locked ? <p>Qui finisce il contenuto già pubblicato. La prossima SCENA non è ancora disponibile.</p> : <button className="primary" disabled={busy || !state.route?.canAdvance} onClick={advance}>CONTINUA</button>}
+      {state.route?.locked ? (s.lockedAfter ? <div className="final-lock"><strong>FINE DEL REALITY</strong><span>La partita è stata salvata.</span></div> : <p>La prossima SCENA non è ancora disponibile.</p>) : <button className="primary" disabled={busy || !state.route?.canAdvance} onClick={advance}>CONTINUA</button>}
     </section>}
   </article>;
 }

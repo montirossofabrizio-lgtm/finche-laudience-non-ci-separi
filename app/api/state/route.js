@@ -37,7 +37,7 @@ export async function GET(request) {
       blocked: Boolean(route?.blocked) || (scene.unresolvedChoiceCount > 0 && !route?.waitingForPartner) || Boolean(scene.waitingForPartnerChoice),
       locked: Boolean(route?.locked),
       message: scene.waitingForPartnerChoice
-        ? "Aspetta che anche l’altro libro registri la propria scelta."
+        ? "Aspetta che anche l’altra persona registri la propria scelta."
         : (scene.unresolvedChoiceCount > 0
           ? "Prima completa la scelta che hai davanti."
           : (route?.message || null))
