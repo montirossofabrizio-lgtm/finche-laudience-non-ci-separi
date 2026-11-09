@@ -228,72 +228,121 @@ function Landing({ role, setRole, joinCode, setJoinCode, createGame, joinGame, r
   const [resumeRole, setResumeRole] = useState("CHIARA");
   const [recoveryKey, setRecoveryKey] = useState("");
 
-  return <main className="landing acn-landing"><div className="grain" />
-    <section className="hero acn-hero">
-      <div className="sigil large acn-sigil">II</div>
-      <p className="overline">UN REALITY PER DUE GIOCATORI</p>
-      <h1>FINCHÉ L’AUDIENCE<br/><em>NON CI SEPARI</em></h1>
-      <p className="tagline">Una coppia. Due telefoni. Una Produzione che preferirebbe vedervi litigare.</p>
-      <p className="landing-whisper"><span>NON LEGGETEVI LO SCHERMO.</span><strong>LA PRODUZIONE FARÀ IL RESTO.</strong></p>
+  return <main className="landing acn-landing reality-landing">
+    <div className="grain" />
+
+    <section className="reality-keyart" aria-labelledby="reality-home-title">
+      <picture>
+        <source media="(max-width: 639px)" srcSet="/faa-home-mobile.webp" />
+        <img
+          src="/faa-home-wide.webp"
+          alt=""
+          aria-hidden="true"
+          className="reality-keyart-image"
+          fetchPriority="high"
+          draggable="false"
+        />
+      </picture>
+      <div className="reality-keyart-shade" />
+      <div className="reality-broadcast-strip" aria-hidden="true">
+        <span className="live-dot" />
+        <span>ON AIR</span>
+        <span className="broadcast-divider">•</span>
+        <span>DUE GIOCATORI</span>
+        <span className="broadcast-divider">•</span>
+        <span>~60 MIN</span>
+      </div>
+      <h1 id="reality-home-title" className="sr-only">Finché l’audience non ci separi</h1>
     </section>
 
-    <section className="landing-card acn-card">
+    <section className="landing-card acn-card reality-control-card">
       {panel === "start" && <>
-        {savedSession && !savedSession.local && <div className="saved-game-card">
-          <span>PARTITA SALVATA SU QUESTO DISPOSITIVO</span>
+        <div className="reality-intro">
+          <p className="overline">UN REALITY INTERATTIVO PER DUE</p>
+          <p className="reality-intro-copy">Due telefoni. Una coppia. Una Produzione senza scrupoli.</p>
+          <div className="reality-rule">
+            <span>REGOLA N. 1</span>
+            <strong>NON LEGGETEVI LO SCHERMO.</strong>
+          </div>
+        </div>
+
+        {savedSession && !savedSession.local && <div className="saved-game-card reality-saved">
+          <span>DIRETTA INTERROTTA</span>
           <div className="saved-game-main">
             <div><small>PARTITA</small><strong>{savedSession.code}</strong></div>
             <div><small>IL TUO POSTO</small><strong>{displayRole(savedSession.role)}</strong></div>
           </div>
-          <button className="primary" onClick={continueSavedGame}>RIPRENDI QUESTA PARTITA</button>
-          <p>Non serve alcun codice di ripresa su questo dispositivo.</p>
-          <button className="forget-device-btn" onClick={forgetDevice}>DIMENTICA QUESTA PARTITA SU QUESTO DISPOSITIVO</button>
+          <button className="primary" onClick={continueSavedGame}>TORNA IN DIRETTA</button>
+          <p>Su questo dispositivo non serve la chiave di ripresa.</p>
+          <button className="forget-device-btn" onClick={forgetDevice}>DIMENTICA QUESTA PARTITA</button>
         </div>}
+
         {savedSession?.local && <div className="saved-game-card">
           <span>DEMO SALVATA SU QUESTO DISPOSITIVO</span>
           <button className="primary" onClick={continueSavedGame}>RIPRENDI LA DEMO</button>
           <button className="forget-device-btn" onClick={forgetDevice}>DIMENTICA LA DEMO</button>
         </div>}
-        <button className={savedSession ? "secondary" : "primary"} onClick={() => setPanel("create")}>{savedSession ? "INIZIA UN’ALTRA PARTITA" : "INIZIA UNA NUOVA PARTITA"}</button>
-        <button className="secondary" onClick={() => setPanel("join")}>ENTRA CON UN CODICE</button>
-        <button className="secondary subtle" onClick={() => setPanel("resume")}>RIPRENDI SU UN ALTRO DISPOSITIVO</button>
+
+        <div className="reality-actions">
+          <button className={savedSession ? "secondary" : "primary"} onClick={() => setPanel("create")}>
+            {savedSession ? "INIZIA UN’ALTRA DIRETTA" : "INIZIA IL REALITY"}
+          </button>
+          <button className="secondary" onClick={() => setPanel("join")}>HO UN CODICE PARTITA</button>
+          <button className="secondary subtle" onClick={() => setPanel("resume")}>RIPRENDI SU UN ALTRO DISPOSITIVO</button>
+        </div>
+
+        <p className="reality-disclaimer">La Produzione declina ogni responsabilità per silenzi imbarazzanti, accuse infondate e improvvisi picchi d’audience.</p>
       </>}
 
       {panel === "create" && <>
+        <div className="panel-broadcast-title"><span className="live-dot" /> CASTING</div>
         <p className="section-label">SCEGLI IL TUO POSTO</p>
         <div className="role-grid">
           {ROLE_OPTIONS.map(r => <button key={r.id} className={`role-choice ${role===r.id?"selected":""}`} onClick={()=>setRole(r.id)}><span>{r.label}</span><small>{r.note}</small></button>)}
         </div>
         <p className="hint acn-role-hint">L’altra persona riceverà automaticamente l’altro posto. Non scambiatevi i telefoni.</p>
-        <button className="primary" disabled={busy} onClick={createGame}>{busy ? "PREPARO…" : "CREA PARTITA"}</button>
-        <button className="text-btn" onClick={()=>setPanel("start")}>Indietro</button>
+        <button className="primary" disabled={busy} onClick={createGame}>{busy ? "PREPARO LA DIRETTA…" : "CREA PARTITA"}</button>
+        <button className="text-btn" onClick={()=>setPanel("start")}>Torna alla copertina</button>
       </>}
 
       {panel === "join" && <>
+        <div className="panel-broadcast-title"><span className="live-dot" /> ACCESSO STUDIO</div>
         <p className="section-label">CODICE PARTITA</p>
         <input className="code-input" maxLength={6} value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="7K4M2Q"/>
         <p className="hint">Il posto rimasto libero verrà assegnato automaticamente.</p>
-        <button className="primary" disabled={busy || joinCode.length < 4} onClick={joinGame}>{busy ? "ENTRO…" : "ENTRA"}</button>
-        <button className="text-btn" onClick={()=>setPanel("start")}>Indietro</button>
+        <button className="primary" disabled={busy || joinCode.length < 4} onClick={joinGame}>{busy ? "TI PORTO IN STUDIO…" : "ENTRA"}</button>
+        <button className="text-btn" onClick={()=>setPanel("start")}>Torna alla copertina</button>
       </>}
 
       {panel === "resume" && <>
+        <div className="panel-broadcast-title"><span className="live-dot" /> RIENTRO IN DIRETTA</div>
         <p className="section-label">RIPRENDI IL TUO POSTO</p>
         <input className="code-input" maxLength={6} value={resumeCode} onChange={e=>setResumeCode(e.target.value.toUpperCase())} placeholder="CODICE PARTITA"/>
         <div className="role-grid">
           {ROLE_OPTIONS.map(r=><button key={r.id} className={`role-choice ${resumeRole===r.id?"selected":""}`} onClick={()=>setResumeRole(r.id)}><span>{r.label}</span><small>{r.note}</small></button>)}
         </div>
         <input className="code-input recovery" maxLength={8} value={recoveryKey} onChange={e=>setRecoveryKey(e.target.value.toUpperCase())} placeholder="CHIAVE DI RIPRESA"/>
-        <p className="hint">Usala soltanto se stai cambiando telefono/browser o se hai cancellato i dati locali. Sul dispositivo originale la partita si riprende automaticamente.</p>
+        <p className="hint">Serve soltanto su un nuovo telefono/browser o dopo aver cancellato i dati locali.</p>
         <button className="primary" disabled={busy || resumeCode.length < 4 || recoveryKey.length < 6} onClick={()=>resumeGame({code:resumeCode,role:resumeRole,recoveryKey})}>RIPRENDI</button>
+        <button className="text-btn" onClick={()=>setPanel("start")}>Torna alla copertina</button>
+      </>}
+
+      {panel === "demo" && <>
+        <p className="section-label">DEMO OFFLINE · NON CANONICA</p>
+        <div className="role-grid">
+          <button className="role-choice" onClick={()=>startLocal("CHIARA")}>CONCORRENTE A</button>
+          <button className="role-choice" onClick={()=>startLocal("LUCIO")}>CONCORRENTE B</button>
+        </div>
         <button className="text-btn" onClick={()=>setPanel("start")}>Indietro</button>
       </>}
 
-      {panel === "demo" && <><p className="section-label">DEMO OFFLINE · NON CANONICA</p><div className="role-grid"><button className="role-choice" onClick={()=>startLocal("CHIARA")}>LIBRO DI SARA</button><button className="role-choice" onClick={()=>startLocal("LUCIO")}>LIBRO DI LUCA</button></div><p className="hint">Serve solo a provare grafica, Cronaca della diretta e oggetti problematici senza database.</p><button className="text-btn" onClick={()=>setPanel("start")}>Indietro</button></>}
       {error && <p className="inline-error">{error}</p>}
     </section>
 
-    <footer className="landing-footer">STESSA COPPIA. DUE VERSIONI. UNA PRODUZIONE SENZA SCRUPOLI.</footer>
+    <footer className="landing-footer reality-footer">
+      <span>FINCHÉ L’AUDIENCE NON CI SEPARI</span>
+      <small>LA PRODUZIONE STA GIÀ GUARDANDO.</small>
+    </footer>
   </main>;
 }
 
